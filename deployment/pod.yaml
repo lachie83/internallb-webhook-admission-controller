@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    role: webhook-admission-controller
+  name: internallb-webhook-admission-controller
+spec:
+  containers:
+    - name: webhook
+      image: lachlanevenson/internallb-webhook-admission-controller:latest
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 8000

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    role: webhook-admission-controller
+  name: internallb-webhook-admission-controller
+spec:
+  ports:
+    - port: 443
+      targetPort: 8000
+  selector:
+    role: webhook-admission-controller
