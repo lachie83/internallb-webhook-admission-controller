@@ -5,20 +5,23 @@ This Kubernetes Admission controller only admits the creation of v1/service reso
 
 See [upstream k8s docs](https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer) for details on these annotations
 
-# Project State
+## Project State
 
 Experimental
 
-# Attribution
+## Attribution
 
-This projects uses the upstream examples found in https://github.com/caesarxuchao/example-webhook-admission-controller
-https://github.com/kubernetes/kubernetes/tree/release-1.9/test/images/webhook
+This projects uses the upstream examples found in the following repos:
+* https://github.com/caesarxuchao/example-webhook-admission-controller
+* https://github.com/kubernetes/kubernetes/tree/release-1.9/test/images/webhook
 
-# Supported Kubernetes versions
+Massive thanks for all the work that went into crafting reusable examples.
+
+## Supported Kubernetes versions
 
 * 1.8
 
-# Supported Clouds
+## Supported Clouds
 
 * Azure
 
