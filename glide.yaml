@@ -1,6 +1,0 @@
-package: github.com/lachie83/internallb-webhook-admission-controller
-import:
-- package: k8s.io/client-go
-  version: release-5.0
-- package: k8s.io/api
-  version: release-1.8
