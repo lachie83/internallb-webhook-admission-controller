@@ -24,17 +24,16 @@
 #   go-tests = true
 #   unused-packages = true
 
+[[constraint]]
+  revision = "19e3f5aa3adca672c153d324e6b7d82ff8935f03"
+  name = "k8s.io/apimachinery"
 
 [[constraint]]
-  branch = "release-1.8"
+  branch = "release-1.9"
   name = "k8s.io/api"
 
 [[constraint]]
-  name = "k8s.io/apimachinery"
-  version = "kubernetes-1.8.0-rc.1"
-
-[[constraint]]
-  branch = "release-5.0"
+  branch = "release-6.0"
   name = "k8s.io/client-go"
 
 [prune]
