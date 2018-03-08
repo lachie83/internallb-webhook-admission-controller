@@ -23,7 +23,7 @@ import (
 	"net/http"
 
 	"github.com/golang/glog"
-	"k8s.io/api/admission/v1alpha1"
+	"k8s.io/api/admission/v1beta1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,12 +36,12 @@ type v1Service struct {
 }
 
 // only allow pods to pull images from specific registry.
-func admit(data []byte) *v1alpha1.AdmissionReviewStatus {
-	var reviewStatus = &v1alpha1.AdmissionReviewStatus{
+func admit(data []byte) *v1beta1.AdmissionResponse {
+	var reviewStatus = &v1beta1.AdmissionResponse{
 		Allowed: true,
 	}
 
-	ar := v1alpha1.AdmissionReview{}
+	ar := v1beta1.AdmissionReview{}
 	if err := json.Unmarshal(data, &ar); err != nil {
 		glog.Error(err)
 		return nil
@@ -49,12 +49,12 @@ func admit(data []byte) *v1alpha1.AdmissionReviewStatus {
 	// The externalAdmissionHookConfiguration registered via selfRegistration
 	// asks the kube-apiserver only sends admission request regarding services.
 	serviceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
-	if ar.Spec.Resource != serviceResource {
+	if ar.Request.Resource != serviceResource {
 		glog.Errorf("expect resource to be %s", serviceResource)
 		return nil
 	}
 
-	raw := ar.Spec.Object.Raw
+	raw := ar.Request.Object.Raw
 	service := v1Service{}
 	if err := json.Unmarshal(raw, &service); err != nil {
 		glog.Error(err)
@@ -68,7 +68,7 @@ func admit(data []byte) *v1alpha1.AdmissionReviewStatus {
 	return reviewStatus
 }
 
-func admitLB(r *v1alpha1.AdmissionReviewStatus, s v1Service) {
+func admitLB(r *v1beta1.AdmissionResponse, s v1Service) {
 	r.Allowed = false
 	r.Result = &metav1.Status{
 		Reason: "the service annotations do not contain required key and value",
@@ -97,9 +97,9 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reviewStatus := admit(body)
-	ar := v1alpha1.AdmissionReview{
-		Status: *reviewStatus,
+	reviewResponse := admit(body)
+	ar := v1beta1.AdmissionReview{
+		Response: reviewResponse,
 	}
 
 	resp, err := json.Marshal(ar)
