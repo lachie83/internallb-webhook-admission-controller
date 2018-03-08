@@ -29,16 +29,11 @@ import (
 )
 
 // only allow pods to pull images from specific registry.
-func admit(data []byte) *v1beta1.AdmissionResponse {
+func admitServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	var reviewStatus = &v1beta1.AdmissionResponse{
 		Allowed: true,
 	}
 
-	ar := v1beta1.AdmissionReview{}
-	if err := json.Unmarshal(data, &ar); err != nil {
-		glog.Error(err)
-		return nil
-	}
 	// The externalAdmissionHookConfiguration registered via selfRegistration
 	// asks the kube-apiserver only sends admission request regarding services.
 	serviceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
@@ -55,13 +50,13 @@ func admit(data []byte) *v1beta1.AdmissionResponse {
 	}
 
 	if service.Spec.Type == "LoadBalancer" {
-		admitLB(reviewStatus, service)
+		validateLB(reviewStatus, service)
 	}
 
 	return reviewStatus
 }
 
-func admitLB(r *v1beta1.AdmissionResponse, s v1.Service) {
+func validateLB(r *v1beta1.AdmissionResponse, s v1.Service) {
 	r.Allowed = false
 	r.Result = &metav1.Status{
 		Reason: "the service annotations do not contain required key and value",
@@ -75,7 +70,9 @@ func admitLB(r *v1beta1.AdmissionResponse, s v1.Service) {
 	}
 }
 
-func serve(w http.ResponseWriter, r *http.Request) {
+type admitFunc func(v1beta1.AdmissionReview) *v1beta1.AdmissionResponse
+
+func serve(w http.ResponseWriter, r *http.Request, admin admitFunc) {
 	var body []byte
 	if r.Body != nil {
 		if data, err := ioutil.ReadAll(r.Body); err == nil {
@@ -90,12 +87,24 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reviewResponse := admit(body)
-	ar := v1beta1.AdmissionReview{
+	var reviewResponse *v1beta1.AdmissionResponse
+	ar := v1beta1.AdmissionReview{}
+	if err := json.Unmarshal(body, &ar); err != nil {
+		glog.Error(err)
+		reviewResponse = &v1beta1.AdmissionResponse{
+			Result: &metav1.Status{
+				Message: err.Error(),
+			},
+		}
+	} else {
+		reviewResponse = admitServices(ar)
+	}
+
+	response := v1beta1.AdmissionReview{
 		Response: reviewResponse,
 	}
 
-	resp, err := json.Marshal(ar)
+	resp, err := json.Marshal(response)
 	if err != nil {
 		glog.Error(err)
 	}
@@ -104,9 +113,13 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func serveServices(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, admitServices)
+}
+
 func main() {
 	flag.Parse()
-	http.HandleFunc("/", serve)
+	http.HandleFunc("/services", serveServices)
 	clientset := getClient()
 	server := &http.Server{
 		Addr:      ":8000",

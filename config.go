@@ -30,6 +30,8 @@ import (
 	"github.com/golang/glog"
 )
 
+func strPtr(s string) *string { return &s }
+
 // get a clientset with in-cluster config.
 func getClient() *kubernetes.Clientset {
 	config, err := rest.InClusterConfig()
@@ -105,6 +107,7 @@ func selfRegistration(clientset *kubernetes.Clientset, caCert []byte) {
 					Service: &v1beta1.ServiceReference{
 						Namespace: "default",
 						Name:      "internallb-webhook-admission-controller",
+						Path:      strPtr("/services"),
 					},
 					CABundle: caCert,
 				},

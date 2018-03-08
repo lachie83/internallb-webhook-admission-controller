@@ -8,6 +8,7 @@ webhooks:
     service:
       name: internallb-webhook-admission-controller
       namespace: default
+      path: /services
   failurePolicy: Ignore
   name: internallb-webhook-admission-controller.k8s.io
   rules:
