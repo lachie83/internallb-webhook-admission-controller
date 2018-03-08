@@ -23,52 +23,46 @@ import (
 	"net/http"
 
 	"github.com/golang/glog"
-	"k8s.io/api/admission/v1alpha1"
+	"k8s.io/api/admission/v1beta1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type v1Service struct {
-	Spec              v1.ServiceSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	Status            v1.ServiceStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
-	metav1.ObjectMeta `json:",inline"`
-	metav1.TypeMeta   `json:",inline"`
-}
+const (
+	addServiceAnnotationPatch string = `[
+		 {"op":"add","path":"/metadata/annotations","value":{"service.beta.kubernetes.io/azure-load-balancer-internal":"true"}}
+	]`
+)
 
 // only allow pods to pull images from specific registry.
-func admit(data []byte) *v1alpha1.AdmissionReviewStatus {
-	var reviewStatus = &v1alpha1.AdmissionReviewStatus{
+func admitServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+	var reviewStatus = &v1beta1.AdmissionResponse{
 		Allowed: true,
 	}
 
-	ar := v1alpha1.AdmissionReview{}
-	if err := json.Unmarshal(data, &ar); err != nil {
-		glog.Error(err)
-		return nil
-	}
 	// The externalAdmissionHookConfiguration registered via selfRegistration
 	// asks the kube-apiserver only sends admission request regarding services.
 	serviceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
-	if ar.Spec.Resource != serviceResource {
+	if ar.Request.Resource != serviceResource {
 		glog.Errorf("expect resource to be %s", serviceResource)
 		return nil
 	}
 
-	raw := ar.Spec.Object.Raw
-	service := v1Service{}
+	raw := ar.Request.Object.Raw
+	service := v1.Service{}
 	if err := json.Unmarshal(raw, &service); err != nil {
 		glog.Error(err)
 		return nil
 	}
 
 	if service.Spec.Type == "LoadBalancer" {
-		admitLB(reviewStatus, service)
+		validateLB(reviewStatus, service)
 	}
 
 	return reviewStatus
 }
 
-func admitLB(r *v1alpha1.AdmissionReviewStatus, s v1Service) {
+func validateLB(r *v1beta1.AdmissionResponse, s v1.Service) {
 	r.Allowed = false
 	r.Result = &metav1.Status{
 		Reason: "the service annotations do not contain required key and value",
@@ -82,7 +76,37 @@ func admitLB(r *v1alpha1.AdmissionReviewStatus, s v1Service) {
 	}
 }
 
-func serve(w http.ResponseWriter, r *http.Request) {
+func mutateServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+	var reviewResponse = &v1beta1.AdmissionResponse{
+		Allowed: true,
+	}
+
+	serviceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
+	if ar.Request.Resource != serviceResource {
+		glog.Errorf("expect resource to be %s", serviceResource)
+		return nil
+	}
+
+	raw := ar.Request.Object.Raw
+	service := v1.Service{}
+	if err := json.Unmarshal(raw, &service); err != nil {
+		glog.Error(err)
+		return nil
+	}
+
+	if service.Spec.Type == "LoadBalancer" {
+		glog.V(2).Infof("patching service type LoadBalancer name: %v", service.ObjectMeta.Name)
+		reviewResponse.Patch = []byte(addServiceAnnotationPatch)
+		pt := v1beta1.PatchTypeJSONPatch
+		reviewResponse.PatchType = &pt
+	}
+
+	return reviewResponse
+}
+
+type admitFunc func(v1beta1.AdmissionReview) *v1beta1.AdmissionResponse
+
+func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {
 	var body []byte
 	if r.Body != nil {
 		if data, err := ioutil.ReadAll(r.Body); err == nil {
@@ -97,12 +121,24 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reviewStatus := admit(body)
-	ar := v1alpha1.AdmissionReview{
-		Status: *reviewStatus,
+	var reviewResponse *v1beta1.AdmissionResponse
+	ar := v1beta1.AdmissionReview{}
+	if err := json.Unmarshal(body, &ar); err != nil {
+		glog.Error(err)
+		reviewResponse = &v1beta1.AdmissionResponse{
+			Result: &metav1.Status{
+				Message: err.Error(),
+			},
+		}
+	} else {
+		reviewResponse = admit(ar)
 	}
 
-	resp, err := json.Marshal(ar)
+	response := v1beta1.AdmissionReview{
+		Response: reviewResponse,
+	}
+
+	resp, err := json.Marshal(response)
 	if err != nil {
 		glog.Error(err)
 	}
@@ -111,9 +147,18 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func serveServices(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, admitServices)
+}
+
+func serveMutateServices(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, mutateServices)
+}
+
 func main() {
 	flag.Parse()
-	http.HandleFunc("/", serve)
+	http.HandleFunc("/services", serveServices)
+	http.HandleFunc("/mutating-services", serveMutateServices)
 	clientset := getClient()
 	server := &http.Server{
 		Addr:      ":8000",
