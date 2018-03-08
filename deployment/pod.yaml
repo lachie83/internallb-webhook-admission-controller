@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
     - name: webhook
-      image: lachlanevenson/internallb-webhook-admission-controller:latest
+      image: lachlanevenson/internallb-webhook-admission-controller:1.9
       imagePullPolicy: Always
       ports:
         - containerPort: 8000

@@ -1,22 +1,22 @@
-apiVersion: admissionregistration.k8s.io/v1alpha1
-kind: ExternalAdmissionHookConfiguration
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
 metadata:
   name: internallb-webhook-admission-controller
-externalAdmissionHooks:
-  - name: internallb-webhook-admission-controller.k8s.io
-    rules:
-      - operations:
-          - CREATE, UPDATE
-        apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - services
-    failurePolicy: Ignore
-    clientConfig:
-      service:
-        namespace: default
-        name: internallb-webhook-admission-controller
-      caBundle: 
-        
+webhooks:
+- clientConfig:
+    caBundle: 
+    service:
+      name: internallb-webhook-admission-controller
+      namespace: default
+  failurePolicy: Ignore
+  name: internallb-webhook-admission-controller.k8s.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - services

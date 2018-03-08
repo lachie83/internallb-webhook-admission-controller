@@ -102,7 +102,7 @@ func selfRegistration(clientset *kubernetes.Clientset, caCert []byte) {
 					},
 				}},
 				ClientConfig: v1beta1.WebhookClientConfig{
-					Service: v1beta1.ServiceReference{
+					Service: &v1beta1.ServiceReference{
 						Namespace: "default",
 						Name:      "internallb-webhook-admission-controller",
 					},

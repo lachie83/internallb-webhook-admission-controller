@@ -28,13 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type v1Service struct {
-	Spec              v1.ServiceSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	Status            v1.ServiceStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
-	metav1.ObjectMeta `json:",inline"`
-	metav1.TypeMeta   `json:",inline"`
-}
-
 // only allow pods to pull images from specific registry.
 func admit(data []byte) *v1beta1.AdmissionResponse {
 	var reviewStatus = &v1beta1.AdmissionResponse{
@@ -55,7 +48,7 @@ func admit(data []byte) *v1beta1.AdmissionResponse {
 	}
 
 	raw := ar.Request.Object.Raw
-	service := v1Service{}
+	service := v1.Service{}
 	if err := json.Unmarshal(raw, &service); err != nil {
 		glog.Error(err)
 		return nil
@@ -68,7 +61,7 @@ func admit(data []byte) *v1beta1.AdmissionResponse {
 	return reviewStatus
 }
 
-func admitLB(r *v1beta1.AdmissionResponse, s v1Service) {
+func admitLB(r *v1beta1.AdmissionResponse, s v1.Service) {
 	r.Allowed = false
 	r.Result = &metav1.Status{
 		Reason: "the service annotations do not contain required key and value",
