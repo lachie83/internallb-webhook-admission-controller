@@ -19,7 +19,7 @@ Massive thanks for all the work that went into crafting reusable examples.
 
 ## Supported Kubernetes versions
 
-* 1.8
+* 1.9
 
 ## Supported Clouds
 

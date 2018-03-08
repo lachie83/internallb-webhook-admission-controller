@@ -81,14 +81,14 @@ func configTLS(clientset *kubernetes.Clientset) *tls.Config {
 // by creating externalAdmissionHookConfigurations.
 func selfRegistration(clientset *kubernetes.Clientset, caCert []byte) {
 	time.Sleep(10 * time.Second)
-	client := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations()
+	client := clientset.AdmissionregistrationV1beta1().MutatingWebhookConfigurations()
 	_, err := client.Get("internallb-webhook-admission-controller", metav1.GetOptions{})
 	if err == nil {
 		if err2 := client.Delete("internallb-webhook-admission-controller", nil); err2 != nil {
 			glog.Fatal(err2)
 		}
 	}
-	webhookConfig := &v1beta1.ValidatingWebhookConfiguration{
+	webhookConfig := &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "internallb-webhook-admission-controller",
 		},
@@ -107,7 +107,7 @@ func selfRegistration(clientset *kubernetes.Clientset, caCert []byte) {
 					Service: &v1beta1.ServiceReference{
 						Namespace: "default",
 						Name:      "internallb-webhook-admission-controller",
-						Path:      strPtr("/services"),
+						Path:      strPtr("/mutating-services"),
 					},
 					CABundle: caCert,
 				},

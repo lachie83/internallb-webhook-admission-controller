@@ -28,6 +28,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	addServiceAnnotationPatch string = `[
+		 {"op":"add","path":"/metadata/annotations","value":{"service.beta.kubernetes.io/azure-load-balancer-internal":"true"}}
+	]`
+)
+
 // only allow pods to pull images from specific registry.
 func admitServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	var reviewStatus = &v1beta1.AdmissionResponse{
@@ -70,9 +76,37 @@ func validateLB(r *v1beta1.AdmissionResponse, s v1.Service) {
 	}
 }
 
+func mutateServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+	var reviewResponse = &v1beta1.AdmissionResponse{
+		Allowed: true,
+	}
+
+	serviceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
+	if ar.Request.Resource != serviceResource {
+		glog.Errorf("expect resource to be %s", serviceResource)
+		return nil
+	}
+
+	raw := ar.Request.Object.Raw
+	service := v1.Service{}
+	if err := json.Unmarshal(raw, &service); err != nil {
+		glog.Error(err)
+		return nil
+	}
+
+	if service.Spec.Type == "LoadBalancer" {
+		glog.V(2).Infof("patching service type LoadBalancer name: %v", service.ObjectMeta.Name)
+		reviewResponse.Patch = []byte(addServiceAnnotationPatch)
+		pt := v1beta1.PatchTypeJSONPatch
+		reviewResponse.PatchType = &pt
+	}
+
+	return reviewResponse
+}
+
 type admitFunc func(v1beta1.AdmissionReview) *v1beta1.AdmissionResponse
 
-func serve(w http.ResponseWriter, r *http.Request, admin admitFunc) {
+func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {
 	var body []byte
 	if r.Body != nil {
 		if data, err := ioutil.ReadAll(r.Body); err == nil {
@@ -97,7 +131,7 @@ func serve(w http.ResponseWriter, r *http.Request, admin admitFunc) {
 			},
 		}
 	} else {
-		reviewResponse = admitServices(ar)
+		reviewResponse = admit(ar)
 	}
 
 	response := v1beta1.AdmissionReview{
@@ -117,9 +151,14 @@ func serveServices(w http.ResponseWriter, r *http.Request) {
 	serve(w, r, admitServices)
 }
 
+func serveMutateServices(w http.ResponseWriter, r *http.Request) {
+	serve(w, r, mutateServices)
+}
+
 func main() {
 	flag.Parse()
 	http.HandleFunc("/services", serveServices)
+	http.HandleFunc("/mutating-services", serveMutateServices)
 	clientset := getClient()
 	server := &http.Server{
 		Addr:      ":8000",
