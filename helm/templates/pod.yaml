@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: internallb-webhook-admission-controller
+  labels:
+    role: webhook-admission-controller
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  containers:
+    - name: webhook
+      image: {{ .Values.containers.webhook.image }}
+      imagePullPolicy: {{ .Values.containers.webhook.imagePullPolicy }}
+      ports:
+        - containerPort: 8000
+      volumeMounts:
+      - name: certs
+        mountPath: /secrets/certs
+        readOnly: true
+      - name: server-key
+        mountPath: /secrets/server-key
+        readOnly: true
+  volumes:
+  - name: certs
+    secret:
+      secretName: certs
+  - name: server-key
+    secret:
+      secretName: server-key

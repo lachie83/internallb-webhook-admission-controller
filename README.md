@@ -37,7 +37,13 @@ make build
 
 ## Deploy
 
-This is still a WIP as I would like to streamline the certificate creation experience via something like a Helm Chart.
+This project comes with a Helm chart to simplify deployment. The chart will
+generate the required certificates and keys, put them into secrets, and create
+a pod that mounts the secrets for the admission webhook to access.
+
+```bash
+helm install ./helm
+```
 
 ## Explanation on the CAs/Certs/Keys
 
