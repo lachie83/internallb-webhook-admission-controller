@@ -1,0 +1,9 @@
+To get the certificate for the CA that issued the admission controller's
+certificate:
+
+  kubectl get secret certs{{ if not (eq "default" .Release.Namespace) }} --namespace {{ .Release.Namespace }}{{ end }} -o jsonpath='{.data.caCert}' | base64 --decode
+
+To get the certificate for the admission controller:
+
+  kubectl get secret certs{{ if not (eq "default" .Release.Namespace) }} --namespace {{ .Release.Namespace }}{{ end }} -o jsonpath='{.data.serverCert}' | base64 --decode
+

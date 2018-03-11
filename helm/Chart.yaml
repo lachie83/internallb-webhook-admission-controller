@@ -1,0 +1,10 @@
+name: internallb-webhook-admission-controller
+version: 0.0.1
+description: A Kubernetes admission controller that requires load balancers to be internal.
+appVersion: 0.0.2
+home: https://github.com/lachie83/internallb-webhook-admission-controller
+keywords:
+- kubernetes
+- admission controller
+- load balancer
+- webhook

@@ -1,0 +1,19 @@
+# Default values for internallb-webhook-admission-controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+ca:
+  name: internallb_webhook_admission_controller_ca
+  lifetime: 100000
+
+server:
+  name: internallb_webhook_admission_controller.default.svc
+  lifetime: 100000
+  subjectAlternativeName:
+    ip: []
+    dns: []
+
+containers:
+  webhook:
+    image: lachlanevenson/internallb-webhook-admission-controller:1.9
+    imagePullPolicy: Always
