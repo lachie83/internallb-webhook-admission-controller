@@ -8,6 +8,6 @@ spec:
   containers:
     - name: webhook
       image: lachlanevenson/internallb-webhook-admission-controller:1.9
-      imagePullPolicy: Always
+      imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 8000

@@ -155,15 +155,24 @@ func serveMutateServices(w http.ResponseWriter, r *http.Request) {
 	serve(w, r, mutateServices)
 }
 
+var options struct {
+	Port    int
+	TLSCert string
+	TLSKey  string
+}
+
 func main() {
+	certKey := certKey{}
+	flag.StringVar(&certKey.PairName, "keypairname", "tls", "certificate and key pair name")
+	flag.StringVar(&certKey.CertDirectory, "certdir", "/var/run/internallb-webhook-admission-controller", "certificate and key directory")
 	flag.Parse()
+
 	http.HandleFunc("/services", serveServices)
 	http.HandleFunc("/mutating-services", serveMutateServices)
 	clientset := getClient()
 	server := &http.Server{
-		Addr:      ":8000",
-		TLSConfig: configTLS(clientset),
+		Addr:      ":8443",
+		TLSConfig: configTLS(clientset, &certKey),
 	}
-	go selfRegistration(clientset, caCert)
 	server.ListenAndServeTLS("", "")
 }
