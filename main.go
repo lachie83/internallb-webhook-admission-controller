@@ -155,12 +155,6 @@ func serveMutateServices(w http.ResponseWriter, r *http.Request) {
 	serve(w, r, mutateServices)
 }
 
-var options struct {
-	Port    int
-	TLSCert string
-	TLSKey  string
-}
-
 func main() {
 	certKey := certKey{}
 	flag.StringVar(&certKey.PairName, "keypairname", "tls", "certificate and key pair name")
