@@ -60,8 +60,7 @@ helm install --name admission-webhook charts/internallb-webhook-admission-contro
 To install a `ValidatingWebhookConfiguration` please use the following command
 
 ```
-helm install --name admission-webhook charts/internallb-webhook-admission-controller
- --set admissionRegistration.kind=ValidatingWebhookConfiguration
+helm install --name admission-webhook charts/internallb-webhook-admission-controller --set admissionRegistration.kind=ValidatingWebhookConfiguration
 ```
 
 For a full list of configurable values in the helm chart please, run the following command

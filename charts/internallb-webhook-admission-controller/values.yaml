@@ -1,4 +1,7 @@
 # Default values for InternalLB Webhook Admission Controller
+rbac:
+  create: true
+
 admissionRegistration:
   # valid values are "ValidatingWebhookConfiguration", and "MutatingWebhookConfiguration"
   kind: MutatingWebhookConfiguration
