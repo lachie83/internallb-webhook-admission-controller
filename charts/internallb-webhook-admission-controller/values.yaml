@@ -6,7 +6,8 @@ admissionRegistration:
   # valid values are "Ignore" and "Fail"
   failurePolicy: Ignore
 controller:
-  image: lachlanevenson/internallb-webhook-admission-controller:1.9
+  image: lachlanevenson/internallb-webhook-admission-controller
+  imageTag: 1.9
   imagePullPolicy: IfNotPresent
   serviceAccount: internallb-webhook-admission-controller
   tls:

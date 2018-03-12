@@ -24,7 +24,7 @@ spec:
       serviceAccountName: "{{ .Values.controller.serviceAccount }}"
       containers:
       - name: webhook
-        image: {{ .Values.controller.image }}
+        image: {{ .Values.controller.image }}:{{ .Values.controller.imageTag }}
         imagePullPolicy: {{ .Values.controller.imagePullPolicy }}
         resources:
           requests:
