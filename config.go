@@ -32,17 +32,17 @@ import (
 )
 
 type certKey struct {
-	// CertFile is a file containing a PEM-encoded certificate, and possibly the complete certificate chain
+	// CertFile is the PEM-encoded certificate, and possibly the complete certificate chain
 	CertFile []byte
-	// KeyFile is a file containing a PEM-encoded private key for the certificate specified by CertFile
+	// KeyFile is the PEM-encoded private key for the certificate specified by CertFile
 	KeyFile []byte
-	// CACertFile is an optional file containing the certificate chain for CertKey.CertFile
+	// CACertFile is an optional file containing the certificate chain for certKey.CertFile
 	CACertFile string
 	// CertDirectory is a directory that will contain the certificates.  If the cert and key aren't specifically set
 	// this will be used to derive a match with the "pair-name"
 	CertDirectory string
 	// PairName is the name which will be used with CertDirectory to make a cert and key names
-	// It becomes CertDirector/PairName.crt and CertDirector/PairName.key
+	// It becomes CertDirectory/PairName.crt and CertDirectory/PairName.key
 	PairName string
 }
 
@@ -81,18 +81,16 @@ func configTLS(clientset *kubernetes.Clientset, ck *certKey) *tls.Config {
 	apiserverCA := x509.NewCertPool()
 	apiserverCA.AppendCertsFromPEM(cert)
 
-	// Default path /var/run/internallb-webhook-admission-controller
-	// Default name tls.crt and tls.key
 	certPath := path.Join(ck.CertDirectory, ck.PairName+".crt")
 	keyPath := path.Join(ck.CertDirectory, ck.PairName+".key")
 
 	ck.CertFile, err = ioutil.ReadFile(certPath)
 	if err != nil {
-		glog.Fatalf("Cannot read cert from %s")
+		glog.Fatalf("Cannot read cert from %s", certPath)
 	}
 	ck.KeyFile, err = ioutil.ReadFile(keyPath)
 	if err != nil {
-		glog.Fatalf("Cannot read key from %s", path.Join(ck.CertDirectory, ck.PairName+".key"))
+		glog.Fatalf("Cannot read key from %s", keyPath)
 	}
 
 	_, err = certutil.CanReadCertAndKey(certPath, keyPath)

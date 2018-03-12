@@ -37,26 +37,35 @@ make build
 
 ## Deploy
 
-This is still a WIP as I would like to streamline the certificate creation experience via something like a Helm Chart.
+There are two types of Webhook Admission controllers in Kubernetes 1.9.
+* ValidatingAdmissionWebhook
+* MutatingAdmissionWebhook
 
-## Explanation on the CAs/Certs/Keys
+Enable the relevant Kubeneretes Admission controller by adding to following `--admission-control` and restarting kube-apiserver. See the relevant [docs](https://kubernetes.io/docs/admin/extensible-admission-controllers/#external-admission-webhooks)
+```
+ValidatingAdmissionWebhook,MutatingAdmissionWebhook
+```
 
-Taken from upstream https://github.com/caesarxuchao/example-webhook-admission-controller
+Here is an example minikube command to buid a cluster with the Admission Controller flags already present on the API server.
+```
+minikube start --kubernetes-version v1.9.3 --bootstrapper kubeadm --logtostderr --vm-driver=virtualbox --extra-config=apiserver.admission-control="NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota,ValidatingAdmissionWebhook,MutatingAdmissionWebhook,PodPreset"
+```
 
-The apiserver initiates a tls connection with the webhook, so the apiserver is
-the tls client, and the webhook is the tls server.
+Once the cluster has been configured you can deploy the admission webhook to using Helm. The default installation configures a `MutatingWebhookConfiguration`.
 
-The webhook proves its identity by the `serverCert` in the certs.go. The server
-cert is signed by the CA in certs.go. To let the apiserver trust the `caCert`,
-the webhook registers itself with the apiserver via the
-`admissionregistration/v1alpha1/externalAdmissionHook` API, with
-`clientConfig.caBundle=caCert`.
+```
+helm install --name admission-webhook charts/internallb-webhook-admission-controller
+```
 
-For maximum protection, this example webhook requires and verifies the client
-(i.e., the apiserver in this case) cert. The cert presented by the apiserver is
-signed by a client CA, whose cert is stored in the configmap
-`extension-apiserver-authentication` in the `kube-system` namespace. See the
-`getAPIServerCert` function for more information. Usually you don't need to
-worry about setting up this CA cert. It's taken care of when the cluster is
-created. You can disable the client cert verification by setting the
-`tls.Config.ClientAuth` to `tls.NoClientCert` in `config.go`.
+To install a `ValidatingWebhookConfiguration` please use the following command
+
+```
+helm install --name admission-webhook charts/internallb-webhook-admission-controller
+ --set admissionRegistration.kind=ValidatingWebhookConfiguration
+```
+
+For a full list of configurable values in the helm chart please, run the following command
+
+```
+helm inspect charts/internallb-webhook-admission-controller
+```
