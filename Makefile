@@ -7,6 +7,10 @@ else
 	DOCKER_TAG = $(GIT_BRANCH)
 endif
 
+ifeq ($(GIT_BRANCH),)
+	DOCKER_TAG = ${CIRCLE_TAG}
+endif
+
 docker_build:
 	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
