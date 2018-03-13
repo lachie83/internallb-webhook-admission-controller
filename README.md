@@ -5,6 +5,9 @@ This Kubernetes Admission controller only admits the creation of v1/service reso
 
 See [upstream k8s docs](https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer) for details on these annotations
 
+### CircleCI Build Status
+[![CircleCI](https://circleci.com/gh/lachie83/internallb-webhook-admission-controller.svg?style=svg)](https://circleci.com/gh/lachie83/internallb-webhook-admission-controller)
+
 ## Project State
 
 Experimental
