@@ -23,7 +23,11 @@ Massive thanks for all the work that went into crafting reusable examples.
 
 ## Supported Clouds
 
-* Azure
+* Supports any cloud provider that provisions an internal LoadBalancer based on Kubernetes service annotation. See upstream [docs](https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer).
+* Cloud support include:
+  * Azure
+  * Google Cloud
+  * AWS
 
 ## Prerequisites
 Please enable the admission webhook feature
@@ -32,7 +36,7 @@ Please enable the admission webhook feature
 ## Build
 
 ```bash
-make build
+make docker_build
 ```
 
 ## Deploy

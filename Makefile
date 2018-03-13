@@ -7,7 +7,7 @@ else
 	DOCKER_TAG = $(GIT_BRANCH)
 endif
 
-build:
+docker_build:
 	docker build -t internallb-webhook-admission-controller .
 
 docker_push:
