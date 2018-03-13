@@ -1,5 +1,7 @@
-
 # Kubernetes Internal LoadBalancer Admission Webhook
+
+[![Go Report Card](https://goreportcard.com/badge/lachie83/internallb-webhook-admission-controller)](https://goreportcard.com/report/lachie83/internallb-webhook-admission-controller) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/lachie83/internallb-webhook-admission-controller/blob/master/LICENSE)
+
 
 This Kubernetes Admission controller only admits the creation of v1/service resources containing the correct cloud provider annotations to create Internal LoadBalancers.
 
