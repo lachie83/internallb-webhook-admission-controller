@@ -8,7 +8,7 @@ else
 endif
 
 docker_build:
-	docker build -t internallb-webhook-admission-controller .
+	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
 docker_push:
 	# Push to DockerHub
