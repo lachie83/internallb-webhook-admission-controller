@@ -13,12 +13,10 @@ jobs:
       - run:
           name: Publish container
           filters:
-            branches:
-              only:
-                - master
-                - /^build-.*/
             tags:
               only: /^v.*/
+            branches:
+              only: master
           command: |
             echo $DOCKER_PASS | base64 -d > ${HOME}/docker_pass
             docker login -u $DOCKER_USER -p "$(cat ${HOME}/docker_pass)"
