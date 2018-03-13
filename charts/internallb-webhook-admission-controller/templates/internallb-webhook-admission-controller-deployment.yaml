@@ -26,6 +26,13 @@ spec:
       - name: webhook
         image: {{ .Values.controller.image }}:{{ .Values.controller.imageTag }}
         imagePullPolicy: {{ .Values.controller.imagePullPolicy }}
+        command: ["/internallb-webhook-admission-controller"]
+        args:
+        - --svcannotationkey={{ .Values.controller.serviceAnnotationKey }}
+        - --svcannotationvalue={{ .Values.controller.serviceAnnotationValue }}
+        - --alsologtostderr
+        - -v=4
+        - 2>&1
         resources:
           requests:
             cpu: 100m
