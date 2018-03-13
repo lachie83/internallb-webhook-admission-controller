@@ -10,8 +10,8 @@ admissionRegistration:
   failurePolicy: Ignore
 controller:
   image: lachlanevenson/internallb-webhook-admission-controller
-  imageTag: 1.9
-  imagePullPolicy: IfNotPresent
+  imageTag: latest
+  imagePullPolicy: Always
   serviceAccount: internallb-webhook-admission-controller
   serviceAnnotationKey: service.beta.kubernetes.io/azure-load-balancer-internal
   serviceAnnotationValue: "true"
