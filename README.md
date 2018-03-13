@@ -41,12 +41,12 @@ There are two types of Webhook Admission controllers in Kubernetes 1.9.
 * ValidatingAdmissionWebhook
 * MutatingAdmissionWebhook
 
-Enable the relevant Kubeneretes Admission controller by adding to following `--admission-control` and restarting kube-apiserver. See the relevant [docs](https://kubernetes.io/docs/admin/extensible-admission-controllers/#external-admission-webhooks)
+Enable the relevant Kubernetes Admission controller by adding to following `--admission-control` and restarting kube-apiserver. See the relevant [docs](https://kubernetes.io/docs/admin/extensible-admission-controllers/#external-admission-webhooks).
 ```
 ValidatingAdmissionWebhook,MutatingAdmissionWebhook
 ```
 
-Here is an example minikube command to buid a cluster with the Admission Controller flags already present on the API server.
+Here is an example minikube command to build a cluster with the Admission Controller flags already present on the API server.
 ```
 minikube start --kubernetes-version v1.9.3 --bootstrapper kubeadm --logtostderr --vm-driver=virtualbox --extra-config=apiserver.admission-control="NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota,ValidatingAdmissionWebhook,MutatingAdmissionWebhook,PodPreset"
 ```

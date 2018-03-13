@@ -50,7 +50,3 @@ spec:
       - name: certs
         secret:
           secretName: {{ template "fullname" . }}-cert
-          {{- if .Values.controller.tls.requestHeaderCA }}
-          - key: requestheader-ca.crt
-            path: requestheader-ca.crt
-          {{- end }}
