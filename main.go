@@ -166,6 +166,10 @@ func serveMutateServices(w http.ResponseWriter, r *http.Request) {
 	serve(w, r, &Options, mutateServices)
 }
 
+func serveHealthz(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	certKey := certKey{}
 	flag.StringVar(&Options.PortNumber, "port", "8443", "webserver port")
@@ -177,6 +181,7 @@ func main() {
 
 	http.HandleFunc("/services", serveServices)
 	http.HandleFunc("/mutating-services", serveMutateServices)
+	http.HandleFunc("/healthz", serveHealthz)
 	clientset := getClient()
 	server := &http.Server{
 		Addr:      fmt.Sprintf(":%s", Options.PortNumber),
