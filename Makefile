@@ -2,7 +2,7 @@ DOCKER_IMAGE ?= lachlanevenson/internallb-webhook-admission-controller
 GIT_BRANCH ?= `git rev-parse --abbrev-ref HEAD`
 
 ifeq ($(GIT_BRANCH), master)
-	DOCKER_TAG = latest
+	DOCKER_TAG = canary
 else
 	DOCKER_TAG = $(GIT_BRANCH)
 endif
