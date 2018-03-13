@@ -30,7 +30,7 @@ spec:
         args:
         - --svcannotationkey={{ .Values.controller.serviceAnnotationKey }}
         - --svcannotationvalue={{ .Values.controller.serviceAnnotationValue }}
-        - --alsologtostderr
+        - --logtostderr
         - -v=4
         - 2>&1
         resources:
