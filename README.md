@@ -22,6 +22,10 @@ This projects uses the upstream examples found in the following repos:
 
 Massive thanks for all the work that went into crafting reusable examples.
 
+## Usage
+
+[![Usage Demo](https://img.youtube.com/vi/SYf-cbmA6WI/0.jpg)](https://youtu.be/SYf-cbmA6WI "Usage Demo")
+
 ## Supported Kubernetes versions
 
 * 1.9
