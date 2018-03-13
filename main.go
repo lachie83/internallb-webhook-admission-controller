@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -28,14 +29,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+/*
 const (
 	addServiceAnnotationPatch string = `[
 		 {"op":"add","path":"/metadata/annotations","value":{"service.beta.kubernetes.io/azure-load-balancer-internal":"true"}}
 	]`
 )
+*/
+
+type options struct {
+	ServiceAnnotationKey   string
+	ServiceAnnotationValue string
+	PortNumber             string
+}
+
+var (
+	Options options
+)
 
 // only allow pods to pull images from specific registry.
-func admitServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+func admitServices(ar v1beta1.AdmissionReview, o *options) *v1beta1.AdmissionResponse {
 	var reviewStatus = &v1beta1.AdmissionResponse{
 		Allowed: true,
 	}
@@ -56,27 +69,27 @@ func admitServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	}
 
 	if service.Spec.Type == "LoadBalancer" {
-		validateLB(reviewStatus, service)
+		validateLB(reviewStatus, service, o)
 	}
 
 	return reviewStatus
 }
 
-func validateLB(r *v1beta1.AdmissionResponse, s v1.Service) {
+func validateLB(r *v1beta1.AdmissionResponse, s v1.Service, o *options) {
 	r.Allowed = false
 	r.Result = &metav1.Status{
 		Reason: "the service annotations do not contain required key and value",
 	}
 
 	for k, v := range s.ObjectMeta.Annotations {
-		if k == "service.beta.kubernetes.io/azure-load-balancer-internal" && v == "true" {
+		if k == o.ServiceAnnotationKey && v == o.ServiceAnnotationValue {
 			r.Allowed = true
 			r.Result = nil
 		}
 	}
 }
 
-func mutateServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+func mutateServices(ar v1beta1.AdmissionReview, o *options) *v1beta1.AdmissionResponse {
 	var reviewResponse = &v1beta1.AdmissionResponse{
 		Allowed: true,
 	}
@@ -94,6 +107,10 @@ func mutateServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 		return nil
 	}
 
+	addServiceAnnotationPatch := fmt.Sprintf(`[
+		 {"op":"add","path":"/metadata/annotations","value":{"%s":"%s"}}
+	]`, o.ServiceAnnotationKey, o.ServiceAnnotationValue)
+
 	if service.Spec.Type == "LoadBalancer" {
 		glog.V(2).Infof("patching service type LoadBalancer name: %v", service.ObjectMeta.Name)
 		reviewResponse.Patch = []byte(addServiceAnnotationPatch)
@@ -104,9 +121,9 @@ func mutateServices(ar v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	return reviewResponse
 }
 
-type admitFunc func(v1beta1.AdmissionReview) *v1beta1.AdmissionResponse
+type admitFunc func(v1beta1.AdmissionReview, *options) *v1beta1.AdmissionResponse
 
-func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {
+func serve(w http.ResponseWriter, r *http.Request, o *options, admit admitFunc) {
 	var body []byte
 	if r.Body != nil {
 		if data, err := ioutil.ReadAll(r.Body); err == nil {
@@ -131,7 +148,7 @@ func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {
 			},
 		}
 	} else {
-		reviewResponse = admit(ar)
+		reviewResponse = admit(ar, o)
 	}
 
 	response := v1beta1.AdmissionReview{
@@ -148,22 +165,35 @@ func serve(w http.ResponseWriter, r *http.Request, admit admitFunc) {
 }
 
 func serveServices(w http.ResponseWriter, r *http.Request) {
-	serve(w, r, admitServices)
+	serve(w, r, &Options, admitServices)
 }
 
 func serveMutateServices(w http.ResponseWriter, r *http.Request) {
-	serve(w, r, mutateServices)
+	serve(w, r, &Options, mutateServices)
 }
 
 func main() {
+	certKey := certKey{}
+	flag.StringVar(&Options.PortNumber, "port", "8443", "webserver port")
+	flag.StringVar(&certKey.PairName, "keypairname", "tls", "certificate and key pair name")
+	flag.StringVar(&certKey.CertDirectory, "certdir", "/var/run/internallb-webhook-admission-controller", "certificate and key directory")
+	flag.StringVar(&Options.ServiceAnnotationKey, "svcannotationkey", "service.beta.kubernetes.io/azure-load-balancer-internal", "service annotation key to match or mutate")
+	flag.StringVar(&Options.ServiceAnnotationValue, "svcannotationvalue", "true", "service annotation value to match or mutate")
 	flag.Parse()
+
 	http.HandleFunc("/services", serveServices)
 	http.HandleFunc("/mutating-services", serveMutateServices)
 	clientset := getClient()
 	server := &http.Server{
-		Addr:      ":8000",
-		TLSConfig: configTLS(clientset),
+		Addr:      fmt.Sprintf(":%s", Options.PortNumber),
+		TLSConfig: configTLS(clientset, &certKey),
 	}
-	go selfRegistration(clientset, caCert)
-	server.ListenAndServeTLS("", "")
+
+	glog.V(2).Infof("starting webserver on port %s", Options.PortNumber)
+	glog.V(2).Infof("service annotation to match/mutate: %s: %s", Options.ServiceAnnotationKey, Options.ServiceAnnotationValue)
+
+	if err := server.ListenAndServeTLS("", ""); err != nil {
+		glog.Fatal(err)
+	}
+
 }

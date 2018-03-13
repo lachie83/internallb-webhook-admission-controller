@@ -20,17 +20,31 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"time"
+	"io/ioutil"
+	"path"
 
-	"k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	certutil "k8s.io/client-go/util/cert"
 
 	"github.com/golang/glog"
 )
 
-func strPtr(s string) *string { return &s }
+type certKey struct {
+	// CertFile is the PEM-encoded certificate, and possibly the complete certificate chain
+	CertFile []byte
+	// KeyFile is the PEM-encoded private key for the certificate specified by CertFile
+	KeyFile []byte
+	// CACertFile is an optional file containing the certificate chain for certKey.CertFile
+	CACertFile string
+	// CertDirectory is a directory that will contain the certificates.  If the cert and key aren't specifically set
+	// this will be used to derive a match with the "pair-name"
+	CertDirectory string
+	// PairName is the name which will be used with CertDirectory to make a cert and key names
+	// It becomes CertDirectory/PairName.crt and CertDirectory/PairName.key
+	PairName string
+}
 
 // get a clientset with in-cluster config.
 func getClient() *kubernetes.Clientset {
@@ -46,7 +60,7 @@ func getClient() *kubernetes.Clientset {
 }
 
 // retrieve the CA cert that will signed the cert used by the
-// "GenericAdmissionWebhook" plugin admission controller.
+// "ValidatingAdmissionWebhook or MutationAdmissionWebhook" plugin admission controller.
 func getAPIServerCert(clientset *kubernetes.Clientset) []byte {
 	c, err := clientset.CoreV1().ConfigMaps("kube-system").Get("extension-apiserver-authentication", metav1.GetOptions{})
 	if err != nil {
@@ -61,12 +75,30 @@ func getAPIServerCert(clientset *kubernetes.Clientset) []byte {
 	return []byte(pem)
 }
 
-func configTLS(clientset *kubernetes.Clientset) *tls.Config {
+func configTLS(clientset *kubernetes.Clientset, ck *certKey) *tls.Config {
 	cert := getAPIServerCert(clientset)
+	var err error
 	apiserverCA := x509.NewCertPool()
 	apiserverCA.AppendCertsFromPEM(cert)
 
-	sCert, err := tls.X509KeyPair(serverCert, serverKey)
+	certPath := path.Join(ck.CertDirectory, ck.PairName+".crt")
+	keyPath := path.Join(ck.CertDirectory, ck.PairName+".key")
+
+	ck.CertFile, err = ioutil.ReadFile(certPath)
+	if err != nil {
+		glog.Fatalf("Cannot read cert from %s", certPath)
+	}
+	ck.KeyFile, err = ioutil.ReadFile(keyPath)
+	if err != nil {
+		glog.Fatalf("Cannot read key from %s", keyPath)
+	}
+
+	_, err = certutil.CanReadCertAndKey(certPath, keyPath)
+	if err != nil {
+		glog.Fatal("Cannot verify server certificate and key")
+	}
+
+	sCert, err := tls.X509KeyPair(ck.CertFile, ck.KeyFile)
 	if err != nil {
 		glog.Fatal(err)
 	}
@@ -74,47 +106,5 @@ func configTLS(clientset *kubernetes.Clientset) *tls.Config {
 		Certificates: []tls.Certificate{sCert},
 		ClientCAs:    apiserverCA,
 		// ClientAuth:   tls.RequireAndVerifyClientCert,
-	}
-}
-
-// register this webhook admission controller with the kube-apiserver
-// by creating externalAdmissionHookConfigurations.
-func selfRegistration(clientset *kubernetes.Clientset, caCert []byte) {
-	time.Sleep(10 * time.Second)
-	client := clientset.AdmissionregistrationV1beta1().MutatingWebhookConfigurations()
-	_, err := client.Get("internallb-webhook-admission-controller", metav1.GetOptions{})
-	if err == nil {
-		if err2 := client.Delete("internallb-webhook-admission-controller", nil); err2 != nil {
-			glog.Fatal(err2)
-		}
-	}
-	webhookConfig := &v1beta1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "internallb-webhook-admission-controller",
-		},
-		Webhooks: []v1beta1.Webhook{
-			{
-				Name: "internallb-webhook-admission-controller.k8s.io",
-				Rules: []v1beta1.RuleWithOperations{{
-					Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-					Rule: v1beta1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"services"},
-					},
-				}},
-				ClientConfig: v1beta1.WebhookClientConfig{
-					Service: &v1beta1.ServiceReference{
-						Namespace: "default",
-						Name:      "internallb-webhook-admission-controller",
-						Path:      strPtr("/mutating-services"),
-					},
-					CABundle: caCert,
-				},
-			},
-		},
-	}
-	if _, err := client.Create(webhookConfig); err != nil {
-		glog.Fatal(err)
 	}
 }
