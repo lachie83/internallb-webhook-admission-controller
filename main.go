@@ -29,14 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-/*
-const (
-	addServiceAnnotationPatch string = `[
-		 {"op":"add","path":"/metadata/annotations","value":{"service.beta.kubernetes.io/azure-load-balancer-internal":"true"}}
-	]`
-)
-*/
-
+// Runtime binary flags
 type options struct {
 	ServiceAnnotationKey   string
 	ServiceAnnotationValue string
@@ -44,6 +37,7 @@ type options struct {
 }
 
 var (
+	// Options runtime binary flags
 	Options options
 )
 
