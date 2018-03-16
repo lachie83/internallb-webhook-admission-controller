@@ -43,7 +43,7 @@ var (
 
 // only allow pods to pull images from specific registry.
 func admitServices(ar v1beta1.AdmissionReview, o *options) *v1beta1.AdmissionResponse {
-	var reviewStatus = &v1beta1.AdmissionResponse{
+	var reviewResponse = &v1beta1.AdmissionResponse{
 		Allowed: true,
 	}
 
@@ -63,10 +63,10 @@ func admitServices(ar v1beta1.AdmissionReview, o *options) *v1beta1.AdmissionRes
 	}
 
 	if service.Spec.Type == "LoadBalancer" {
-		validateLB(reviewStatus, service, o)
+		validateLB(reviewResponse, service, o)
 	}
 
-	return reviewStatus
+	return reviewResponse
 }
 
 func validateLB(r *v1beta1.AdmissionResponse, s v1.Service, o *options) {

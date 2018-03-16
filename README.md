@@ -29,6 +29,7 @@ Massive thanks for all the work that went into crafting reusable examples.
 ## Supported Kubernetes versions
 
 * 1.9
+* 1.10
 
 ## Supported Clouds
 
